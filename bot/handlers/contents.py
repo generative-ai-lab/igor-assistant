@@ -111,7 +111,7 @@ async def handle_voice_message(message: Message, session: AsyncSession):
     
     answer = await generate_answer(transcript, message.from_user.id, session, is_text=False)
     
-    audio_fn = await generate_audio(answer.content)
+    audio_fn = await generate_audio(answer)
     
     audio = AudioSegment.from_file(audio_folder/audio_fn, format="wav")
     output_buffer = BytesIO()
@@ -133,7 +133,7 @@ async def handle_text(message: Message, session: AsyncSession):
     
     answer = await generate_answer(text, message.from_user.id, session)
     
-    audio_fn = await generate_audio(answer.content)
+    audio_fn = await generate_audio(answer)
     
     audio = AudioSegment.from_file(audio_folder/audio_fn, format="wav")
     output_buffer = BytesIO()
