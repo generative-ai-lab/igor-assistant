@@ -4,8 +4,11 @@ from aiogram import Bot, Dispatcher
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
+
+from bot.bot import bot
+
 from bot.config_reader import config
-from bot.handlers import commands, callbacks
+from bot.handlers import commands, callbacks, contents
 from bot.middlewares import DbSessionMiddleware
 from bot.ui_commands import set_ui_commands
 
@@ -14,7 +17,7 @@ async def main():
     engine = create_async_engine(url=config.db_url, echo=True)
     sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
 
-    bot = Bot(config.bot_token.get_secret_value(), parse_mode="HTML")
+    # bot = Bot(config.bot_token.get_secret_value(), parse_mode="HTML")
 
     # Setup dispatcher and bind routers to it
     dp = Dispatcher()
@@ -24,6 +27,7 @@ async def main():
 
     # Register handlers
     dp.include_router(commands.router)
+    dp.include_router(contents.router)
     dp.include_router(callbacks.router)
 
     # Set bot commands in UI
