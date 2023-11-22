@@ -4,19 +4,25 @@ from uuid import uuid4
 from datetime import datetime
 import base64
 import json
+from io import BytesIO
+
+from pydub import AudioSegment
 
 import aiohttp
 
 from aiogram import Router, html
-from aiogram.types import Message, Voice
+from aiogram.types import Message, Voice, BufferedInputFile
 from aiogram.filters import Filter
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from aiogram.methods.send_voice import SendVoice
 
 from bot.bot import bot
 from bot.db.models import ChatMessage
 from bot.gpt_input import system_prompt
 from bot.openai_api import openai_client
+
+from bot.logger import logger
 
 
 audio_folder = Path(os.getcwd())/'audio'
@@ -46,26 +52,31 @@ async def generate_answer(text, user_id, session, is_text=True):
     
     compl = await openai_client.chat.completions.create(messages=gpt_messages, model='gpt-4-1106-preview')
     answer = compl.choices[0].message
+    answer_text = answer.content.replace('**', '').replace('__', '')
     
-    session.add(ChatMessage(user_id=user_id, role=answer.role, content=answer.content, is_text=True, date_time=datetime.now()))
+    session.add(ChatMessage(user_id=user_id, role=answer.role, content=answer_text, is_text=True, date_time=datetime.now()))
     await session.commit()
     
-    return answer
+    return answer_text
 
 
 VOICE_GEN_URL = "http://epimachok.ru:11110/gen_voise"
 
 async def generate_audio(text):
-    
     async with aiohttp.ClientSession() as session:
-        data = aiohttp.FormData()
-        data.add_field('text', text)
+        data = {'text': text}
         
-        async with session.post(VOICE_GEN_URL, data=data) as response:
+        async with session.post(VOICE_GEN_URL, json=data) as response:
             json_data = await response.json()
+            logger.info(json_data)
             voice_b64 = json_data['voice_b64']
             voice = base64.b64decode(voice_b64)
-            return voice
+    
+            fn = f"{uuid4()}.wav"
+            with open(audio_folder/fn, 'wb') as audio_file:
+                audio_file.write(voice)
+            
+            return fn
 
 
 @router.message(VoiceFilter())
@@ -81,7 +92,7 @@ async def handle_voice_message(message: Message, session: AsyncSession):
     binary_audio = open(audio_folder/fn, "rb")
     
     # Здесь можно добавить логику обработки голосового сообщения
-    await message.answer("Я получил ваше голосовое сообщение! Формирую ответ.")
+    # await message.answer("Я получил ваше голосовое сообщение! Формирую ответ.")
     
     # answer = await transcribes(fn, binary_audio)
     
@@ -99,7 +110,17 @@ async def handle_voice_message(message: Message, session: AsyncSession):
     # await message.answer(f"Вы сказали: {transcript}")
     
     answer = await generate_answer(transcript, message.from_user.id, session, is_text=False)
-    await message.answer(answer.content)
+    
+    audio_fn = await generate_audio(answer.content)
+    
+    audio = AudioSegment.from_file(audio_folder/audio_fn, format="wav")
+    output_buffer = BytesIO()
+    audio.export(output_buffer, format="ogg", codec="libopus")
+    ogg_opus_bytes = output_buffer.getvalue()
+    audio_file = BufferedInputFile(ogg_opus_bytes, filename=audio_fn)
+    
+    await message.answer(answer)
+    await SendVoice(chat_id=message.chat.id, voice=audio_file)
 
 
 @router.message()
@@ -108,8 +129,18 @@ async def handle_text(message: Message, session: AsyncSession):
     text = message.text
     # await message.answer(f"Вы отправили текст: {text}")
     
-    await message.answer("Я получил ваше сообщение! Формирую ответ.")
+    # await message.answer("Я получил ваше сообщение! Формирую ответ.")
     
     answer = await generate_answer(text, message.from_user.id, session)
-    await message.answer(answer.content)
+    
+    audio_fn = await generate_audio(answer.content)
+    
+    audio = AudioSegment.from_file(audio_folder/audio_fn, format="wav")
+    output_buffer = BytesIO()
+    audio.export(output_buffer, format="ogg", codec="libopus")
+    ogg_opus_bytes = output_buffer.getvalue()
+    audio_file = BufferedInputFile(ogg_opus_bytes, filename=audio_fn)
+    
+    await message.answer(answer)
+    await SendVoice(chat_id=message.chat.id, voice=audio_file)
     
