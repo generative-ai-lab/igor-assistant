@@ -50,7 +50,7 @@ async def generate_answer(text, user_id, session, is_text=True):
     session.add(ChatMessage(user_id=user_id, role='user', content=text, is_text=is_text, date_time=datetime.now()))
     await session.commit()
     
-    compl = await openai_client.chat.completions.create(messages=gpt_messages, model='gpt-4-1106-preview')
+    compl = await openai_client.chat.completions.create(messages=gpt_messages, model='gpt-4-1106-preview', temperature = 0.3)
     answer = compl.choices[0].message
     answer_text = answer.content.replace('**', '').replace('__', '')
     
@@ -60,7 +60,7 @@ async def generate_answer(text, user_id, session, is_text=True):
     return answer_text
 
 
-VOICE_GEN_URL = "http://epimachok.ru:11110/gen_voise"
+VOICE_GEN_URL = "http://109.248.175.40:11110/gen_voise"
 
 async def generate_audio(text):
     async with aiohttp.ClientSession() as session:

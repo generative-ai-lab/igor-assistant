@@ -4,6 +4,8 @@ from aiogram.types import Message
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.static_text import greeting
+
 router = Router(name="commands-router")
 
 
@@ -13,9 +15,7 @@ async def cmd_start(message: Message):
     Handles /start command
     :param message: Telegram message with "/start" text
     """
-    await message.answer(
-        "Привет мир, я родился!"
-    )
+    await message.answer(greeting)
 
 
 # @router.message(Command("play"))
