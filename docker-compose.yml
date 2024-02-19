@@ -9,21 +9,9 @@ services:
             - .env
         depends_on:
             - db
-            - migrations
         volumes:
             - ./:/app/assistant
-    migrations:
-        build:
-            context: .
-            dockerfile: Dockerfile
-        restart: never
-        env_file:
-            - .env
-        depends_on:
-            - db
-        command: ["sh", "-c", "alembic upgrade head"]
-        volumes:
-            - ./:/app/assistant
+        command: bash -c "alembic upgrade head && python -m bot"
     db:
         image: postgres:12-alpine
         restart: always
