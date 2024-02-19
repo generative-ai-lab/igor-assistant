@@ -21,17 +21,19 @@ from bot.bot import bot
 from bot.db.models import ChatMessage
 from bot.gpt_input import system_prompt
 from bot.openai_api import openai_client
+from bot.config_reader import config
 
 from bot.logger import logger
 
 
-audio_folder = Path(os.getcwd())/'audio'
+# audio_folder = Path(os.getcwd())/'audio'
+
 router = Router(name="contents-router")
 
 
-class VoiceFilter(Filter):
-    async def __call__(self, message: Message) -> bool:
-        return message.voice is not None
+# class VoiceFilter(Filter):
+#     async def __call__(self, message: Message) -> bool:
+#         return message.voice is not None
 
 
 async def generate_answer(text, user, session, is_text=True):
@@ -66,7 +68,8 @@ async def generate_answer(text, user, session, is_text=True):
         date_time=datetime.now()))
     await session.commit()
     
-    compl = await openai_client.chat.completions.create(messages=gpt_messages, model='gpt-4-1106-preview', temperature = 0.3)
+    compl = await openai_client.chat.completions.create(
+        messages=gpt_messages, model="gpt-4-turbo-preview", temperature=0.3)
     answer = compl.choices[0].message
     answer_text = answer.content.replace('**', '').replace('__', '')
     
@@ -155,7 +158,7 @@ async def handle_text(message: Message, session: AsyncSession):
     
     # await message.answer("Я получил ваше сообщение! Формирую ответ.")
     
-    answer = "ответ" # await generate_answer(text, message.from_user, session)
+    answer = await generate_answer(text, message.from_user, session)
     
     # audio_fn = await generate_audio(answer)
     

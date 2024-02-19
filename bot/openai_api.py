@@ -14,4 +14,4 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 openai_client = AsyncOpenAI(
     http_client=httpx.AsyncClient(
-        proxies="socks5://prod:31egbedof@80.209.240.32:1080"))
+        proxies="socks5://176.222.55.46:1080"))
