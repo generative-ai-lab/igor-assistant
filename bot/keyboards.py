@@ -6,19 +6,19 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from bot.common import BallsCallbackFactory
 
 
-def generate_balls() -> InlineKeyboardMarkup:
-    """
-    Generates a new 3x3 play field with 8 red balls and 1 green ball
-    :return: Inline keyboard
-    """
-    balls_mask = [False] * 9
-    balls_mask[randint(0, 8)] = True
-    balls = ["🔴", "🟢"]
-    data = ["red", "green"]
-    builder = InlineKeyboardBuilder()
-    for item in balls_mask:
-        builder.button(
-            text=balls[item],
-            callback_data=BallsCallbackFactory(color=data[item]).pack()
-        )
-    return builder.adjust(3).as_markup()
+# def generate_balls() -> InlineKeyboardMarkup:
+#     """
+#     Generates a new 3x3 play field with 8 red balls and 1 green ball
+#     :return: Inline keyboard
+#     """
+#     balls_mask = [False] * 9
+#     balls_mask[randint(0, 8)] = True
+#     balls = ["🔴", "🟢"]
+#     data = ["red", "green"]
+#     builder = InlineKeyboardBuilder()
+#     for item in balls_mask:
+#         builder.button(
+#             text=balls[item],
+#             callback_data=BallsCallbackFactory(color=data[item]).pack()
+#         )
+#     return builder.adjust(3).as_markup()

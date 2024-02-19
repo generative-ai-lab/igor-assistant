@@ -1,0 +1,23 @@
+version: '3.8'
+services:
+    bot:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        restart: always
+        env_file:
+            - .env
+        depends_on:
+            - db
+        volumes:
+            - ./:/app/assistant
+    db:
+        image: postgres:12-alpine
+        restart: always
+        env_file:
+            - .env
+        volumes:
+            - pg_data:/var/lib/postgresql/data
+volumes:
+    pg_data:
+

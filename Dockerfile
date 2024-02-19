@@ -9,10 +9,10 @@ RUN pip install --no-cache-dir --upgrade pip \
 # "Run" image
 FROM python:3.11-slim-bullseye
 COPY --from=compile-image /opt/venv /opt/venv
-RUN apt-get update &&\
-    apt-get install -y ffmpeg &&\
-    rm -rf /var/lib/apt/lists/*
+# RUN apt-get update &&\
+#     apt-get install -y ffmpeg &&\
+#     rm -rf /var/lib/apt/lists/*
 ENV PATH="/opt/venv/bin:$PATH"
-WORKDIR /app/igor_assistant
+WORKDIR /app/assistant
 # COPY . /app/igor_assistant
 CMD ["python", "-m", "bot"]
