@@ -41,11 +41,27 @@ async def generate_answer(text, user, session, is_text=True):
     user_first_name = user.first_name
     user_last_name = user.last_name
     username = user.username
-    
-    sql = select(ChatMessage)\
-        .filter_by(user_id=user_id)\
-        .order_by(ChatMessage.date_time.desc())\
-        .limit(9)
+
+    new_dialog_sql = select(ChatMessage) \
+        .filter_by(user_id=user_id, is_new_dialog_start=True) \
+        .order_by(ChatMessage.date_time.desc()) \
+        .limit(1)
+    new_dialog_start = await session.execute(new_dialog_sql)
+    new_dialog_start_msg = new_dialog_start.scalars().first()
+
+    # If a new dialog start message exists, fetch messages after it
+    if new_dialog_start_msg:
+        sql = select(ChatMessage) \
+            .filter(ChatMessage.user_id == user_id, ChatMessage.date_time > new_dialog_start_msg.date_time) \
+            .order_by(ChatMessage.date_time.desc())\
+            .limit(9)
+    else:
+        # Fallback to the last 9 messages if no new dialog start message exists
+        sql = select(ChatMessage) \
+            .filter_by(user_id=user_id) \
+            .order_by(ChatMessage.date_time.desc()) \
+            .limit(9)
+
     last_messages = await session.execute(sql)
     
     gpt_messages = []

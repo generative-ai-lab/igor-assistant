@@ -9,6 +9,7 @@ async def set_ui_commands(bot: Bot):
     """
     commands = [
         BotCommand(command="start", description="Начать общение с ботом"),
+        BotCommand(command="reset", description="Сбросить диалог с ботом")
     ]
     await bot.set_my_commands(
         commands=commands,

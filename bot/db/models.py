@@ -11,6 +11,7 @@ class ChatMessage(Base):
     user_first_name = Column(Text)
     user_last_name = Column(Text)
     username = Column(Text)
+    is_new_dialog_start = Column(Boolean)
     role = Column(Text)
     content = Column(Text)
     is_text = Column(Boolean)

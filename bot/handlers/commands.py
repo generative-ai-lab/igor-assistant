@@ -1,10 +1,11 @@
 from aiogram import Router, html
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime
 
-from bot.static_text import greeting
+from bot.db.models import ChatMessage
+from bot.static_text import greeting, new_dialog_start
 
 router = Router(name="commands-router")
 
@@ -16,6 +17,40 @@ async def cmd_start(message: Message):
     :param message: Telegram message with "/start" text
     """
     await message.answer(greeting)
+
+@router.message(Command("reset"))
+async def cmd_start_new(message: Message, session: AsyncSession):
+    """
+    Handles /start_new command
+    :param message: Telegram message with "/start_new" text
+    """
+
+    user_id = message.from_user.id
+    user_first_name = message.from_user.first_name
+    user_last_name = message.from_user.last_name
+    username = message.from_user.username
+
+    # Create a new ChatMessage object with is_new_dialog_start set to True
+    new_dialog_message = ChatMessage(
+        user_id=user_id,
+        user_first_name=user_first_name,
+        user_last_name=user_last_name,
+        username=username,
+        role='user',
+        content=new_dialog_start,  # the content of the system message
+        is_text=True,
+        date_time=datetime.now(),
+        is_new_dialog_start=True  # Set the flag to indicate start of new dialog
+    )
+
+    # Add the new message to the session and commit
+    session.add(new_dialog_message)
+    await session.commit()
+
+    await message.answer(new_dialog_start)
+
+
+
 
 
 # @router.message(Command("play"))
