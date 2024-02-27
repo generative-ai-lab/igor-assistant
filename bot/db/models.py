@@ -1,6 +1,10 @@
+import datetime
+
 from sqlalchemy import Column, Integer, BigInteger, Text, Time, Boolean
 
 from bot.db.base import Base
+import bot.db
+from bot.config_reader import config
 
 
 class ChatMessage(Base):
@@ -15,3 +19,13 @@ class ChatMessage(Base):
     content = Column(Text)
     is_text = Column(Boolean)
     date_time = Column(Time)
+    
+    @classmethod
+    def delete_expired(cls):
+        expiration_days = config.expiration_days
+        limit = datetime.datetime.now() - datetime.timedelta(days=expiration_days)
+        sql = cls.query.filter(cls.timestamp <= limit).delete()
+        return sql
+        
+    def delete_expired_logs():
+        return ChatMessage.delete_expired()

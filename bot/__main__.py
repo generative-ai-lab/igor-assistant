@@ -3,6 +3,7 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from apscheduler.schedulers.background import BackgroundScheduler
 
 
 from bot.bot import bot
@@ -12,10 +13,31 @@ from bot.handlers import commands, callbacks, contents
 from bot.middlewares import DbSessionMiddleware
 from bot.ui_commands import set_ui_commands
 
+from bot.db.models import ChatMessage
+
+
+async def delete_old_records(session):
+    try:
+        sql = ChatMessage.delete_expired()
+        await session.execute(sql)
+        await session.commit()
+    except Exception as e:
+        await session.rollback()
+        print(f"An error occurred: {e}")
+
 
 async def main():
     engine = create_async_engine(url=config.db_url, echo=True)
     sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
+    
+    session = sessionmaker()
+    
+    async def job():
+        delete_old_records(session)
+    
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(job, 'interval', days=1)  # Runs daily
+    scheduler.start()
 
     # bot = Bot(config.bot_token.get_secret_value(), parse_mode="HTML")
 
