@@ -36,14 +36,12 @@ async def cmd_start_new(message: Message, session: AsyncSession):
         # Update the context window to 1
         user.context_window = 1
         await session.commit()
-        await message.answer("Your dialog context has been reset.")
+        await message.answer("Мы начали новый диалог")
     else:
         # In case the user is not found in the database
         await message.answer("You do not have an existing dialog context to reset.")
 
-    # Add the new message to the session and commit
 
-    await message.answer(new_dialog_start)
 
 
 
