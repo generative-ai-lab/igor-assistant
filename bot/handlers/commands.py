@@ -3,8 +3,8 @@ from aiogram.filters import CommandStart, Command
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
-
-from bot.db.models import ChatMessage
+from sqlalchemy import select
+from bot.db.models import ChatMessage, User
 from bot.static_text import greeting, new_dialog_start
 
 router = Router(name="commands-router")
@@ -26,26 +26,22 @@ async def cmd_start_new(message: Message, session: AsyncSession):
     """
 
     user_id = message.from_user.id
-    user_first_name = message.from_user.first_name
-    user_last_name = message.from_user.last_name
-    username = message.from_user.username
 
-    # Create a new ChatMessage object with is_new_dialog_start set to True
-    new_dialog_message = ChatMessage(
-        user_id=user_id,
-        user_first_name=user_first_name,
-        user_last_name=user_last_name,
-        username=username,
-        role='user',
-        content=new_dialog_start,  # the content of the system message
-        is_text=True,
-        date_time=datetime.now(),
-        is_new_dialog_start=True  # Set the flag to indicate start of new dialog
-    )
+    # Retrieve the User object from the database
+    query = select(User).filter_by(user_id=user_id)
+    result = await session.execute(query)
+    user = result.scalars().first()
+
+    if user:
+        # Update the context window to 1
+        user.context_window = 1
+        await session.commit()
+        await message.answer("Your dialog context has been reset.")
+    else:
+        # In case the user is not found in the database
+        await message.answer("You do not have an existing dialog context to reset.")
 
     # Add the new message to the session and commit
-    session.add(new_dialog_message)
-    await session.commit()
 
     await message.answer(new_dialog_start)
 
