@@ -36,11 +36,11 @@ async def generate_answer(text, user, session, is_text=True):
             first_name=user.first_name,
             last_name=user.last_name,
             username=user.username,
-            context_window=1
+            context_window=0
         )
         session.add(new_user)
         await session.commit()
-        context_window = 1
+        context_window = 0
     else:
         context_window = min(existing_user.context_window + 1, MAX_CONTEXT_WINDOW)
         existing_user.context_window = context_window
@@ -51,6 +51,7 @@ async def generate_answer(text, user, session, is_text=True):
         .filter_by(user_id=user_id) \
         .order_by(ChatMessage.date_time.desc()) \
         .limit(context_window * 2)
+
     last_messages = await session.execute(sql)
 
     gpt_messages = []

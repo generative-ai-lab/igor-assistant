@@ -34,7 +34,7 @@ async def cmd_start_new(message: Message, session: AsyncSession):
 
     if user:
         # Update the context window to 1
-        user.context_window = 1
+        user.context_window = 0
         await session.commit()
         await message.answer("Мы начали новый диалог")
     else:
