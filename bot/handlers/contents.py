@@ -42,25 +42,22 @@ async def generate_answer(text, user, session, is_text=True):
         await session.commit()
         context_window = 0
     else:
-        context_window = min(existing_user.context_window + 1, MAX_CONTEXT_WINDOW)
-        existing_user.context_window = context_window
-        await session.commit()
+        context_window = min(existing_user.context_window, MAX_CONTEXT_WINDOW)
+
     print(f'{context_window=}')
 
     sql = select(ChatMessage) \
         .filter_by(user_id=user_id) \
         .order_by(ChatMessage.date_time.desc()) \
         .limit(context_window * 2)
-
+    # print(f"limit is {context_window * 2}")
+    # print(f"sql query that sends as context{sql}")
     last_messages = await session.execute(sql)
 
-    gpt_messages = []
-    gpt_messages.append({'role': 'system', 'content': system_prompt})
-    for m in last_messages.scalars():
-        gpt_messages.append({'role': m.role, 'content': m.content})
+    gpt_context = [{'role': m.role, 'content': m.content} for m in last_messages.scalars()][::-1]
 
-    gpt_messages = [gpt_messages[0]] + gpt_messages[1:][::-1]
-    gpt_messages.append({'role': 'user', 'content': text})
+    gpt_context.append({'role': 'user', 'content': text})
+    print(f"gpt context messages {gpt_context}")
 
     session.add(ChatMessage(
         user_id=user_id,
@@ -70,9 +67,9 @@ async def generate_answer(text, user, session, is_text=True):
         date_time=datetime.now()))
     await session.commit()
 
-    print(gpt_messages)
+
     compl = await openai_client.chat.completions.create(
-        messages=gpt_messages, model="gpt-4-turbo-preview", temperature=0.3)
+        messages=gpt_context, model="gpt-4-turbo-preview", temperature=0.3)
     answer = compl.choices[0].message
     answer_text = answer.content.replace('**', '').replace('__', '')
 
@@ -82,6 +79,10 @@ async def generate_answer(text, user, session, is_text=True):
         content=answer_text,
         is_text=True,
         date_time=datetime.now()))
+    await session.commit()
+
+
+    existing_user.context_window = context_window + 1
     await session.commit()
 
     return answer_text
