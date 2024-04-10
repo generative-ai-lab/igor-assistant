@@ -10,6 +10,7 @@ from bot.bot import bot
 from bot.db.models import ChatMessage, User
 from bot.gpt_input import system_prompt
 from bot.openai_api import openai_client
+from bot.static_text import greeting, image_mode
 
 # from pydub import AudioSegment
 
@@ -113,8 +114,7 @@ async def generate_image_url(image_prompt):
 async def start_dialog(callback_query: types.CallbackQuery, state: FSMContext):
     await state.set_state(UserState.DialogMode)
     await callback_query.answer("Режим ассистента")
-    await bot.send_message(callback_query.from_user.id, """"Привет 🙂
-Я виртуальный ассистент, созданный на базе GPT-4 Turbo""")
+    await bot.send_message(callback_query.from_user.id, greeting)
 
 
 
@@ -122,8 +122,7 @@ async def start_dialog(callback_query: types.CallbackQuery, state: FSMContext):
 async def generate_image(callback_query: types.CallbackQuery, state: FSMContext):
     await state.set_state(UserState.ImageGenerationMode)
     await callback_query.answer("Режим генерации изображений активирован")
-    await bot.send_message(callback_query.from_user.id, "Режим генерации изображений активирован. Пожалуйста,"
-                                                        " отправьте текстовое описание изображения.")
+    await bot.send_message(callback_query.from_user.id, image_mode)
 
 
 
