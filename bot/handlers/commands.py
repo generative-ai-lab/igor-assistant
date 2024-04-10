@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 from sqlalchemy import select
 from bot.db.models import ChatMessage, User
-from bot.static_text import greeting, new_dialog_start
+from bot.static_text import greeting, new_dialog_start, home_page, greeting_first
+from bot.keyboards import keyboard_main_menu
 
 router = Router(name="commands-router")
 
@@ -16,7 +17,7 @@ async def cmd_start(message: Message):
     Handles /start command
     :param message: Telegram message with "/start" text
     """
-    await message.answer(greeting)
+    await message.answer(greeting_first, reply_markup=keyboard_main_menu())
 
 @router.message(Command("reset"))
 async def cmd_start_new(message: Message, session: AsyncSession):
@@ -36,11 +37,18 @@ async def cmd_start_new(message: Message, session: AsyncSession):
         # Update the context window to 1
         user.context_window = 0
         await session.commit()
-        await message.answer("Мы начали новый диалог")
+        await message.answer(new_dialog_start)
     else:
         # In case the user is not found in the database
         await message.answer("You do not have an existing dialog context to reset.")
 
+
+@router.message(Command("home"))
+async def cmd_home(message: Message):
+    #gets you to the home page and show keyboard for the user to choose from dialog options
+    keyboard = keyboard_main_menu()
+
+    await message.answer(home_page, reply_markup=keyboard)
 
 
 

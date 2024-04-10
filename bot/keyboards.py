@@ -3,8 +3,19 @@ from random import randint
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from bot.common import BallsCallbackFactory
 
+def keyboard_main_menu():
+    #inline keyboard for the main menu with context options for dialog or image
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                {"text": "Режим диалога", "callback_data": "dialog"}
+                ],
+            [
+                {"text": "Генератор изображений", "callback_data": "image"}
+            ]
+        ]
+    )
 
 # def generate_balls() -> InlineKeyboardMarkup:
 #     """

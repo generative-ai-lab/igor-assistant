@@ -1,10 +1,12 @@
 from datetime import datetime
 
-from aiogram import Router
+from aiogram import Router, types
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from aiogram.filters.state import State, StatesGroup
+from bot.bot import bot
 from bot.db.models import ChatMessage, User
 from bot.gpt_input import system_prompt
 from bot.openai_api import openai_client
@@ -18,6 +20,12 @@ router = Router(name="contents-router")
 # class VoiceFilter(Filter):
 #     async def __call__(self, message: Message) -> bool:
 #         return message.voice is not None
+
+
+class UserState(StatesGroup):
+    DialogMode = State()
+    ImageGenerationMode = State()
+
 
 MAX_CONTEXT_WINDOW = 5
 
@@ -88,6 +96,47 @@ async def generate_answer(text, user, session, is_text=True):
     return answer_text
 
 
+async def generate_image_url(image_prompt):
+    response = await openai_client.images.generate(
+        model="dall-e-3",
+        prompt=image_prompt,
+        size="1024x1024",
+        quality="hd",
+        n=1,
+    )
+    image_url = response.data[0].url
+    return image_url
+
+
+
+@router.callback_query(lambda c: c.data == 'dialog')
+async def start_dialog(callback_query: types.CallbackQuery, state: FSMContext):
+    await state.set_state(UserState.DialogMode)
+    await callback_query.answer("Режим ассистента")
+    await bot.send_message(callback_query.from_user.id, """"Привет 🙂
+Я виртуальный ассистент, созданный на базе GPT-4 Turbo""")
+
+
+
+@router.callback_query(lambda c: c.data == 'image')
+async def generate_image(callback_query: types.CallbackQuery, state: FSMContext):
+    await state.set_state(UserState.ImageGenerationMode)
+    await callback_query.answer("Режим генерации изображений активирован")
+    await bot.send_message(callback_query.from_user.id, "Режим генерации изображений активирован. Пожалуйста,"
+                                                        " отправьте текстовое описание изображения.")
+
+
+
+# @router.message(lambda c: c.data == 'dialog')
+# async def start_dialog(message: Message, state: FSMContext):
+#     await state.set_state(UserState.DialogMode)
+#     await message.answer("You are in dialog mode.")
+#
+# @router.message(lambda c: c.data == 'image')
+# async def generate_image(state: FSMContext, message: Message):
+#     await state.set_state(UserState.ImageGenerationMode)
+#     await message.answer("Send me a text prompt for image generation.")
+
 # VOICE_GEN_URL = "http://109.248.175.40:11110/gen_voise"
 
 # async def generate_audio(text):
@@ -152,22 +201,31 @@ async def generate_answer(text, user, session, is_text=True):
 
 
 @router.message()
-async def handle_text(message: Message, session: AsyncSession):
-    # Здесь вы можете добавить логику обработки сообщения
+async def handle_text(message: Message, session: AsyncSession, state: FSMContext):
     text = message.text
-    # await message.answer(f"Вы отправили текст: {text}")
+    if await state.get_state() == UserState.DialogMode.state:
+        answer = await generate_answer(text, message.from_user, session)
+        await message.answer(answer)
+    elif await state.get_state() == UserState.ImageGenerationMode.state:
+        answer = await generate_image_url(text)
+        await bot.send_photo(chat_id=message.chat.id, photo=answer)
 
-    # await message.answer("Я получил ваше сообщение! Формирую ответ.")
+    else:
+        answer = "Please choose a mode."
+        await message.answer(answer)
 
-    answer = await generate_answer(text, message.from_user, session)
 
-    # audio_fn = await generate_audio(answer)
 
-    # audio = AudioSegment.from_file(audio_folder/audio_fn, format="wav")
-    # output_buffer = BytesIO()
-    # audio.export(output_buffer, format="ogg", codec="libopus")
-    # ogg_opus_bytes = output_buffer.getvalue()
-    # audio_file = BufferedInputFile(ogg_opus_bytes, filename=audio_fn)
 
-    await message.answer(answer)
-    # await SendVoice(chat_id=message.chat.id, voice=audio_file)
+
+# async def handle_text(message: types.Message, state: FSMContext):
+#     current_state = await state.get_state()
+#     if current_state == Form.DialogMode.state:
+#         # Process dialog logic
+#         await message.reply("In Dialog Mode. You said: " + message.text)
+#     elif current_state == Form.ImageGeneration.state:
+#         # Process image generation logic
+#         await message.reply("Generating image for: " + message.text)
+#         # ... Image generation logic here ...
+#     else:
+#         await message.reply("Please choose a mode.")
