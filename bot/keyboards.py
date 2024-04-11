@@ -1,35 +1,71 @@
 from random import randint
 
-from aiogram.types import InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, ReplyKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
 def keyboard_main_menu():
-    #inline keyboard for the main menu with context options for dialog or image
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                {"text": "Режим диалога", "callback_data": "dialog"}
-                ],
+                InlineKeyboardButton(text="👥Режим диалога", callback_data="dialog")
+            ],
             [
-                {"text": "Генератор изображений", "callback_data": "image"}
+                InlineKeyboardButton(text="🖼️Генератор изображений", callback_data="image")
             ]
         ]
     )
 
-# def generate_balls() -> InlineKeyboardMarkup:
-#     """
-#     Generates a new 3x3 play field with 8 red balls and 1 green ball
-#     :return: Inline keyboard
-#     """
-#     balls_mask = [False] * 9
-#     balls_mask[randint(0, 8)] = True
-#     balls = ["🔴", "🟢"]
-#     data = ["red", "green"]
-#     builder = InlineKeyboardBuilder()
-#     for item in balls_mask:
-#         builder.button(
-#             text=balls[item],
-#             callback_data=BallsCallbackFactory(color=data[item]).pack()
-#         )
-#     return builder.adjust(3).as_markup()
+
+def choose_generation_options_new(quality="standard", size="1024x1024"):
+    quality_hd = (" ✅" if quality == "hd" else "") + "HD"
+    quality_standard = (" ✅" if quality == "standard" else "") + "Standard"
+
+    size_1024x1024 = (" ✅" if size == "1024x1024" else "") + "1024x1024"
+    size_1024x1792 = (" ✅" if size == "1024x1792" else "") + "1024x1792"
+    size_1792x1024 = (" ✅" if size == "1792x1024" else "") + "1792x1024"
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text=quality_hd, callback_data="quality:hd"),
+                InlineKeyboardButton(text=quality_standard, callback_data="quality:standard"),
+            ],
+            [
+                InlineKeyboardButton(text=size_1024x1024, callback_data="size:1024x1024"),
+                InlineKeyboardButton(text=size_1024x1792, callback_data="size:1024x1792"),
+                InlineKeyboardButton(text=size_1792x1024, callback_data="size:1792x1024"),
+            ]
+        ]
+    )
+
+
+def choose_after_generation_options():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="🔁Перегенерировать", callback_data="generate_again")
+                ],
+            [
+                InlineKeyboardButton(text="✏️Новый запрос", callback_data="image"),
+                ],
+            [
+                InlineKeyboardButton(text="🏠Вернуться в меню", callback_data="home")
+            ]
+        ]
+    )
+
+
+def dialog_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(text="🏠Главное меню")
+                ],
+            [
+                KeyboardButton(text="🔁Сбросить диалог с ботом")
+            ]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
