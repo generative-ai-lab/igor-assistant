@@ -162,6 +162,15 @@ async def generate_again(callback_query: types.CallbackQuery, state: FSMContext,
                                                size=size,
                                                quality=quality,
                                                ) for _ in range(4)]
+        # write urls in imgaeprompt table
+        for url in image_urls:
+            session.add(ImagePrompt(
+                user_id=callback_query.from_user.id,
+                image_url=url,
+                text_prompt=text,
+            ))
+            await session.commit()
+
         await bot.send_media_group(
             chat_id=callback_query.from_user.id,
             media=[InputMediaDocument(media=url) for url in image_urls]
@@ -233,6 +242,14 @@ async def handle_text(message: Message, session: AsyncSession, state: FSMContext
                                                size=size,
                                                quality=quality,
                                                ) for _ in range(4)]
+        for url in image_urls:
+            session.add(ImagePrompt(
+                user_id=message.from_user.id,
+                image_url=url,
+                text_prompt=text,
+            ))
+            await session.commit()
+
         await bot.send_media_group(chat_id=message.chat.id, media=[InputMediaDocument(media=url) for url in image_urls])
         await bot.send_message(message.chat.id,
                                text="Выберите опцию после генерации:",
