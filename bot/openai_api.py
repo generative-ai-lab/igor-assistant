@@ -10,8 +10,9 @@ import socksio
 #         proxies="socks5://prod:31egbedof@80.209.240.32:1080"))
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+PROXY_URL = os.getenv('PROXY_URL')
 
 
 openai_client = AsyncOpenAI(
     http_client=httpx.AsyncClient(
-        proxies="socks5://prod:31egbedof@176.222.55.46:1080"))
+        proxies=PROXY_URL))
