@@ -1,4 +1,6 @@
+import asyncio
 from datetime import datetime
+from typing import List
 from aiogram import Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, InputFile
@@ -23,9 +25,10 @@ class UserState(StatesGroup):
 
 
 MAX_CONTEXT_WINDOW = 5
+photo_urls = []
 
 
-async def generate_answer(text, user, session, is_text=True):
+async def generate_answer(text, user, session, image_urls=None):
     user_id = user.id
 
     existing_user = await session.execute(select(User).filter_by(user_id=user_id))
@@ -41,21 +44,33 @@ async def generate_answer(text, user, session, is_text=True):
         .limit(context_window * 2)
     last_messages = await session.execute(sql)
 
-    gpt_context = [{'role': m.role, 'content': m.content} for m in last_messages.scalars()][::-1]
+    gpt_context = []
+    for message in last_messages.scalars():
+        message_content = [{"type": "text", "text": message.content}]
+        if message.image_urls:
+            for url in message.image_urls:
+                message_content.append({"type": "image_url", "image_url": {"url": url}})
+        gpt_context.append({"role": message.role, "content": message_content})
+    gpt_context = gpt_context[::-1]
+    # Add the current user message
+    user_message_content = [{"type": "text", "text": text}]
+    if image_urls:
+        for url in image_urls:
+            user_message_content.append({"type": "image_url", "image_url": {"url": url}})
+    gpt_context.append({"role": "user", "content": user_message_content})
 
-    gpt_context.append({'role': 'user', 'content': text})
     print(f"gpt context messages {gpt_context}")
 
     session.add(ChatMessage(
         user_id=user_id,
         role='user',
         content=text,
-        is_text=is_text,
+        image_urls=image_urls,
         date_time=datetime.now()))
     await session.commit()
 
     compl = await openai_client.chat.completions.create(
-        messages=gpt_context, model="gpt-4-turbo-preview", temperature=0.3)
+        messages=gpt_context, model="gpt-4o", temperature=0.3, max_tokens=300)
     answer = compl.choices[0].message
     answer_text = answer.content.replace('**', '').replace('__', '')
 
@@ -63,7 +78,6 @@ async def generate_answer(text, user, session, is_text=True):
         user_id=user_id,
         role=answer.role,
         content=answer_text,
-        is_text=True,
         date_time=datetime.now()))
     await session.commit()
 
@@ -219,30 +233,56 @@ async def go_to_main_menu(message: Message, state: FSMContext, session: AsyncSes
                          )
 
 
+async def collect_photo_urls(message: Message):
+    photo = message.photo[-1]
+    file_info = await bot.get_file(photo.file_id)
+    file_url = f"https://api.telegram.org/file/bot{bot.token}/{file_info.file_path}"
+    photo_urls.append(file_url)
+
+
+
+#async foo that will execute after 5 sec it will clear photo_urls list
+async def clear_photo_urls():
+    await asyncio.sleep(2)
+    photo_urls.clear()
+
+
 @router.message()
 async def handle_text(message: Message, session: AsyncSession, state: FSMContext):
     user_data = await state.get_data()
     # remebmer that message.text is the text that user sends for repeating generation
-    text = message.text
     if await state.get_state() == UserState.DialogMode.state:
-        answer = await generate_answer(
-            text=text,
-            user=message.from_user,
-            session=session
-        )
-        await message.answer(text=answer,
-                             reply_markup=dialog_keyboard()
-                             )
+        if message.caption:
+            await collect_photo_urls(message)
+            await asyncio.sleep(1)
+            result = await generate_answer(
+                text=message.caption,
+                user=message.from_user,
+                session=session,
+                image_urls=photo_urls)
+            await bot.send_message(chat_id=message.chat.id, text=result)
+            await clear_photo_urls()
+        elif message.text:
+            text = message.text
+            answer = await generate_answer(
+                text=text,
+                user=message.from_user,
+                session=session
+            )
+            await message.answer(text=answer,reply_markup=dialog_keyboard())
+        else:
+            await collect_photo_urls(message)
     elif await state.get_state() == UserState.ImageGenerationMode.state:
+        text = message.text
         quality = user_data.get("quality", "standard")
         size = user_data.get("size", "1024x1024")
         await message.answer(f"Генерируем ваш запрос – {text} "
                              f"\nС параметрами: \nкачество – {quality}\nразмер изображения – {size}")
-        image_urls = [await generate_image_url(image_prompt=text,
+        dalle_urls = [await generate_image_url(image_prompt=text,
                                                size=size,
                                                quality=quality,
                                                ) for _ in range(4)]
-        for url in image_urls:
+        for url in dalle_urls:
             session.add(ImagePrompt(
                 user_id=message.from_user.id,
                 image_url=url,
@@ -250,7 +290,7 @@ async def handle_text(message: Message, session: AsyncSession, state: FSMContext
             ))
             await session.commit()
 
-        await bot.send_media_group(chat_id=message.chat.id, media=[InputMediaDocument(media=url) for url in image_urls])
+        await bot.send_media_group(chat_id=message.chat.id, media=[InputMediaDocument(media=url) for url in dalle_urls])
         await bot.send_message(message.chat.id,
                                text="Выберите опцию после генерации:",
                                reply_markup=choose_after_generation_options()

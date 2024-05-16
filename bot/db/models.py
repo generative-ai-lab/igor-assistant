@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, BigInteger, Text, Boolean, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, BigInteger, Text, Boolean, ForeignKey, DateTime, JSON
 from sqlalchemy.orm import relationship
 
 from bot.db.base import Base
@@ -21,8 +21,8 @@ class ChatMessage(Base):
     user_id = Column(BigInteger, ForeignKey('user.user_id'))
     role = Column(Text)
     content = Column(Text)
-    is_text = Column(Boolean)
     date_time = Column(DateTime)
+    image_urls = Column(JSON, nullable=True)
     user = relationship("User")
 
 
