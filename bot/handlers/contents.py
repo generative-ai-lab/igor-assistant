@@ -70,7 +70,7 @@ async def generate_answer(text, user, session, image_urls=None):
     await session.commit()
 
     compl = await openai_client.chat.completions.create(
-        messages=gpt_context, model="gpt-4o", temperature=0.3, max_tokens=300)
+        messages=gpt_context, model="gpt-4o", temperature=0.3, max_tokens=1000)
     answer = compl.choices[0].message
     answer_text = answer.content.replace('**', '').replace('__', '')
 
@@ -263,13 +263,22 @@ async def handle_text(message: Message, session: AsyncSession, state: FSMContext
             await bot.send_message(chat_id=message.chat.id, text=result)
             await clear_photo_urls()
         elif message.text:
-            text = message.text
-            answer = await generate_answer(
-                text=text,
-                user=message.from_user,
-                session=session
-            )
-            await message.answer(text=answer,reply_markup=dialog_keyboard())
+            if photo_urls is None:
+                text = message.text
+                answer = await generate_answer(
+                    text=text,
+                    user=message.from_user,
+                    session=session
+                )
+                await message.answer(text=answer,reply_markup=dialog_keyboard())
+            else:
+                result = await generate_answer(
+                    text=message.text,
+                    user=message.from_user,
+                    session=session,
+                    image_urls=photo_urls)
+                await bot.send_message(chat_id=message.chat.id, text=result)
+                await clear_photo_urls()
         else:
             await collect_photo_urls(message)
     elif await state.get_state() == UserState.ImageGenerationMode.state:

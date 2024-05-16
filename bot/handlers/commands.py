@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 from sqlalchemy import select
 from bot.db.models import ChatMessage, User
-from bot.static_text import greeting, new_dialog_start, home_page, greeting_first
+from bot.static_text import greeting, home_page, greeting_first, reset_dialog
 from bot.keyboards import keyboard_main_menu
 from aiogram.fsm.context import FSMContext
 router = Router(name="commands-router")
@@ -59,7 +59,7 @@ async def cmd_start_new(message: Message, session: AsyncSession):
         # Update the context window to 1
         user.context_window = 0
         await session.commit()
-        await message.answer(new_dialog_start)
+        await message.answer(reset_dialog)
     else:
         # In case the user is not found in the database
         await message.answer("You do not have an existing dialog context to reset.")
