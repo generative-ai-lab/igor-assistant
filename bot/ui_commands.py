@@ -14,5 +14,6 @@ async def set_ui_commands(bot: Bot):
     ]
     await bot.set_my_commands(
         commands=commands,
-        scope=BotCommandScopeAllPrivateChats()
+        scope=BotCommandScopeAllPrivateChats(),
+        request_timeout=100
     )
